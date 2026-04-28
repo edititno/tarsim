@@ -1,15 +1,18 @@
-# Tarsim API v0.4
+# Tarsim API v0.5
 # AI Resume Tailoring Tool
 
 import os
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import pdfplumber
 from openai import OpenAI
 import io
 import requests as http_requests
+from docx import Document
+from docx.shared import Pt, Inches
 
-app = FastAPI(title='Tarsim API', version='0.4')
+app = FastAPI(title='Tarsim API', version='0.5')
 
 app.add_middleware(
     CORSMiddleware,
@@ -108,7 +111,6 @@ Be specific. Don't fabricate. Make it sound human, not robotic."""
 def search_jobs(query: str, location: str = '', num_results: int = 20) -> dict:
     """Search jobs via SerpAPI Google Search engine using boolean operators."""
 
-    # Build search query targeting major job boards
     boolean_query = f'({query}) (site:linkedin.com/jobs OR site:indeed.com/viewjob OR site:glassdoor.com/job-listing OR site:ziprecruiter.com/jobs)'
 
     if location:
@@ -126,7 +128,6 @@ def search_jobs(query: str, location: str = '', num_results: int = 20) -> dict:
     response.raise_for_status()
     data = response.json()
 
-    # Extract relevant fields from organic results
     jobs = []
     for result in data.get('organic_results', []):
         jobs.append({
@@ -143,14 +144,50 @@ def search_jobs(query: str, location: str = '', num_results: int = 20) -> dict:
     }
 
 
+def text_to_docx(text: str) -> io.BytesIO:
+    """Convert plain text resume/cover letter to a Word document."""
+    doc = Document()
+
+    # Set default font
+    style = doc.styles['Normal']
+    style.font.name = 'Calibri'
+    style.font.size = Pt(11)
+
+    # Set margins
+    for section in doc.sections:
+        section.top_margin = Inches(0.75)
+        section.bottom_margin = Inches(0.75)
+        section.left_margin = Inches(1)
+        section.right_margin = Inches(1)
+
+    # Add content paragraph by paragraph
+    for line in text.split('\n'):
+        line = line.strip()
+        if line:
+            doc.add_paragraph(line)
+        else:
+            doc.add_paragraph()
+
+    output = io.BytesIO()
+    doc.save(output)
+    output.seek(0)
+    return output
+
+
 @app.get('/')
 def home():
     return {
         'name': 'Tarsim API',
-        'version': '0.4',
+        'version': '0.5',
         'description': 'AI Resume Tailoring Tool',
         'status': 'running',
-        'endpoints': ['/', '/analyze-resume', '/tailor-resume', '/search-jobs']
+        'endpoints': [
+            '/',
+            '/analyze-resume',
+            '/tailor-resume',
+            '/search-jobs',
+            '/export-docx'
+        ]
     }
 
 
@@ -217,10 +254,7 @@ async def tailor_resume_endpoint(
 
 @app.get('/search-jobs')
 def search_jobs_endpoint(query: str, location: str = ''):
-    """Search jobs across major job boards using boolean search via Google.
-
-    Example: /search-jobs?query=AI Engineer&location=Washington DC
-    """
+    """Search jobs across major job boards using boolean search via Google."""
 
     if not SERPAPI_KEY:
         raise HTTPException(status_code=500, detail='SerpAPI key not configured')
@@ -235,8 +269,31 @@ def search_jobs_endpoint(query: str, location: str = ''):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post('/export-docx')
+async def export_docx_endpoint(
+    text: str = Form(...),
+    filename: str = Form('document')
+):
+    """Convert text to a downloadable Word document."""
+
+    if len(text.strip()) < 10:
+        raise HTTPException(status_code=400, detail='Text too short')
+
+    try:
+        docx_file = text_to_docx(text)
+
+        return StreamingResponse(
+            docx_file,
+            media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            headers={'Content-Disposition': f'attachment; filename="{filename}.docx"'}
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == '__main__':
     import uvicorn
-    print('=== Tarsim API v0.4 ===')
+    print('=== Tarsim API v0.5 ===')
     print('Starting server on http://localhost:8000')
     uvicorn.run(app, host='0.0.0.0', port=8000)
