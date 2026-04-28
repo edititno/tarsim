@@ -1,4 +1,4 @@
-# Tarsim API v0.5
+# Tarsim API v0.6
 # AI Resume Tailoring Tool
 
 import os
@@ -11,8 +11,9 @@ import io
 import requests as http_requests
 from docx import Document
 from docx.shared import Pt, Inches
+from pydantic import BaseModel
 
-app = FastAPI(title='Tarsim API', version='0.5')
+app = FastAPI(title='Tarsim API', version='0.6')
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,6 +28,33 @@ openai_client = OpenAI(api_key=OPENAI_KEY)
 
 # SerpAPI setup
 SERPAPI_KEY = os.environ.get('SERPAPI_KEY', '')
+
+
+# Pydantic models for resume builder
+class WorkExperience(BaseModel):
+    company: str
+    title: str
+    duration: str
+    responsibilities: str
+
+
+class Education(BaseModel):
+    school: str
+    degree: str
+    year: str
+
+
+class ResumeBuilderInput(BaseModel):
+    full_name: str
+    email: str
+    phone: str = ''
+    location: str = ''
+    target_role: str
+    summary_input: str  # User's brief description of themselves
+    work_experiences: list[WorkExperience]
+    education: list[Education]
+    skills: str  # Comma-separated or freeform
+    achievements: str = ''  # Optional
 
 
 def extract_text_from_pdf(pdf_bytes: bytes) -> str:
@@ -144,23 +172,84 @@ def search_jobs(query: str, location: str = '', num_results: int = 20) -> dict:
     }
 
 
+def build_resume(input_data: ResumeBuilderInput) -> dict:
+    """Build a professional resume from structured user input."""
+
+    work_text = '\n\n'.join([
+        f"Company: {w.company}\nTitle: {w.title}\nDuration: {w.duration}\nWhat they did: {w.responsibilities}"
+        for w in input_data.work_experiences
+    ])
+
+    education_text = '\n'.join([
+        f"{e.school} - {e.degree} ({e.year})"
+        for e in input_data.education
+    ])
+
+    prompt = f"""You are an expert resume writer. Build a professional, ATS-friendly resume from this information.
+
+CANDIDATE INFO:
+Name: {input_data.full_name}
+Email: {input_data.email}
+Phone: {input_data.phone}
+Location: {input_data.location}
+Target Role: {input_data.target_role}
+
+ABOUT THEM (in their words):
+{input_data.summary_input}
+
+WORK EXPERIENCE:
+{work_text}
+
+EDUCATION:
+{education_text}
+
+SKILLS:
+{input_data.skills}
+
+ACHIEVEMENTS:
+{input_data.achievements}
+
+Build a complete, professional resume targeting the role: "{input_data.target_role}"
+
+Format requirements:
+- Start with name centered, contact info below
+- Professional summary (2-3 lines, optimized for the target role)
+- Work Experience section: each role has 3-5 strong bullet points starting with action verbs, quantified where possible
+- Skills section: relevant to target role
+- Education section
+- Use ATS-friendly formatting (no tables, no columns, plain text)
+- Don't fabricate experience or numbers — only use what was provided
+- Make it sound human, not robotic
+
+Output the complete resume as plain text."""
+
+    response = openai_client.chat.completions.create(
+        model='gpt-4o-mini',
+        messages=[{'role': 'user', 'content': prompt}],
+        max_tokens=2000,
+        temperature=0.7
+    )
+
+    return {
+        'resume': response.choices[0].message.content,
+        'tokens_used': response.usage.total_tokens
+    }
+
+
 def text_to_docx(text: str) -> io.BytesIO:
     """Convert plain text resume/cover letter to a Word document."""
     doc = Document()
 
-    # Set default font
     style = doc.styles['Normal']
     style.font.name = 'Calibri'
     style.font.size = Pt(11)
 
-    # Set margins
     for section in doc.sections:
         section.top_margin = Inches(0.75)
         section.bottom_margin = Inches(0.75)
         section.left_margin = Inches(1)
         section.right_margin = Inches(1)
 
-    # Add content paragraph by paragraph
     for line in text.split('\n'):
         line = line.strip()
         if line:
@@ -178,7 +267,7 @@ def text_to_docx(text: str) -> io.BytesIO:
 def home():
     return {
         'name': 'Tarsim API',
-        'version': '0.5',
+        'version': '0.6',
         'description': 'AI Resume Tailoring Tool',
         'status': 'running',
         'endpoints': [
@@ -186,6 +275,7 @@ def home():
             '/analyze-resume',
             '/tailor-resume',
             '/search-jobs',
+            '/build-resume',
             '/export-docx'
         ]
     }
@@ -269,6 +359,25 @@ def search_jobs_endpoint(query: str, location: str = ''):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post('/build-resume')
+def build_resume_endpoint(input_data: ResumeBuilderInput):
+    """Build a resume from scratch based on structured user input."""
+
+    if len(input_data.work_experiences) == 0:
+        raise HTTPException(status_code=400, detail='At least one work experience required')
+
+    try:
+        result = build_resume(input_data)
+        return {
+            'name': input_data.full_name,
+            'target_role': input_data.target_role,
+            'resume': result['resume'],
+            'tokens_used': result['tokens_used']
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post('/export-docx')
 async def export_docx_endpoint(
     text: str = Form(...),
@@ -294,6 +403,6 @@ async def export_docx_endpoint(
 
 if __name__ == '__main__':
     import uvicorn
-    print('=== Tarsim API v0.5 ===')
+    print('=== Tarsim API v0.6 ===')
     print('Starting server on http://localhost:8000')
     uvicorn.run(app, host='0.0.0.0', port=8000)
