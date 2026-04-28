@@ -1,4 +1,4 @@
-# Tarsim API v0.3
+# Tarsim API v0.4
 # AI Resume Tailoring Tool
 
 import os
@@ -7,8 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import pdfplumber
 from openai import OpenAI
 import io
+import requests as http_requests
 
-app = FastAPI(title='Tarsim API', version='0.3')
+app = FastAPI(title='Tarsim API', version='0.4')
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,6 +21,9 @@ app.add_middleware(
 # OpenAI setup
 OPENAI_KEY = os.environ.get('OPENAI_KEY', '')
 openai_client = OpenAI(api_key=OPENAI_KEY)
+
+# SerpAPI setup
+SERPAPI_KEY = os.environ.get('SERPAPI_KEY', '')
 
 
 def extract_text_from_pdf(pdf_bytes: bytes) -> str:
@@ -101,14 +105,52 @@ Be specific. Don't fabricate. Make it sound human, not robotic."""
     }
 
 
+def search_jobs(query: str, location: str = '', num_results: int = 20) -> dict:
+    """Search jobs via SerpAPI Google Search engine using boolean operators."""
+
+    # Build search query targeting major job boards
+    boolean_query = f'({query}) (site:linkedin.com/jobs OR site:indeed.com/viewjob OR site:glassdoor.com/job-listing OR site:ziprecruiter.com/jobs)'
+
+    if location:
+        boolean_query += f' "{location}"'
+
+    url = 'https://serpapi.com/search'
+    params = {
+        'engine': 'google',
+        'q': boolean_query,
+        'api_key': SERPAPI_KEY,
+        'num': num_results,
+    }
+
+    response = http_requests.get(url, params=params, timeout=30)
+    response.raise_for_status()
+    data = response.json()
+
+    # Extract relevant fields from organic results
+    jobs = []
+    for result in data.get('organic_results', []):
+        jobs.append({
+            'title': result.get('title', ''),
+            'link': result.get('link', ''),
+            'snippet': result.get('snippet', ''),
+            'source': result.get('displayed_link', '').split('/')[0] if result.get('displayed_link') else '',
+        })
+
+    return {
+        'query': boolean_query,
+        'total_results': len(jobs),
+        'jobs': jobs
+    }
+
+
 @app.get('/')
 def home():
     return {
         'name': 'Tarsim API',
-        'version': '0.3',
+        'version': '0.4',
         'description': 'AI Resume Tailoring Tool',
         'status': 'running',
-        'endpoints': ['/', '/analyze-resume', '/tailor-resume']
+        'endpoints': ['/', '/analyze-resume', '/tailor-resume', '/search-jobs']
     }
 
 
@@ -173,8 +215,28 @@ async def tailor_resume_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get('/search-jobs')
+def search_jobs_endpoint(query: str, location: str = ''):
+    """Search jobs across major job boards using boolean search via Google.
+
+    Example: /search-jobs?query=AI Engineer&location=Washington DC
+    """
+
+    if not SERPAPI_KEY:
+        raise HTTPException(status_code=500, detail='SerpAPI key not configured')
+
+    if len(query.strip()) < 3:
+        raise HTTPException(status_code=400, detail='Query too short (min 3 chars)')
+
+    try:
+        result = search_jobs(query, location)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == '__main__':
     import uvicorn
-    print('=== Tarsim API v0.3 ===')
+    print('=== Tarsim API v0.4 ===')
     print('Starting server on http://localhost:8000')
     uvicorn.run(app, host='0.0.0.0', port=8000)
