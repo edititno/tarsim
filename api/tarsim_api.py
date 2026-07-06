@@ -1,9 +1,9 @@
-# Tarsim API v0.6
+# Tarsim API v0.7
 # AI Resume Tailoring Tool
 
 import os
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import pdfplumber
 from openai import OpenAI
@@ -13,7 +13,7 @@ from docx import Document
 from docx.shared import Pt, Inches
 from pydantic import BaseModel
 
-app = FastAPI(title='Tarsim API', version='0.6')
+app = FastAPI(title='Tarsim API', version='0.7')
 
 app.add_middleware(
     CORSMiddleware,
@@ -263,14 +263,28 @@ def text_to_docx(text: str) -> io.BytesIO:
     return output
 
 
+# Path to the frontend (repo_root/static/index.html)
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'static')
+
+
 @app.get('/')
 def home():
+    """Serve the Tarsim web app."""
+    index_path = os.path.join(STATIC_DIR, 'index.html')
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return api_info()
+
+
+@app.get('/api')
+def api_info():
     return {
         'name': 'Tarsim API',
-        'version': '0.6',
+        'version': '0.7',
         'description': 'AI Resume Tailoring Tool',
         'status': 'running',
         'endpoints': [
+            '/api',
             '/',
             '/analyze-resume',
             '/tailor-resume',
