@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarsim — AI Resume Tailoring</title>
+<meta name="description" content="Tarsim sketches the perfect resume for each role. Analyze, tailor, build, and search — powered by AI.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F6F5;
+  --card:#FFFFFF;
+  --ink:#17242F;
+  --ink-soft:#4C5E6E;
+  --ink-faint:#8B99A5;
+  --turquoise:#0E8B8D;
+  --turquoise-deep:#0A6B6D;
+  --saffron:#D9A521;
+  --line:#D9E0E1;
+  --grid:rgba(23,58,75,.055);
+  --danger:#B4442F;
+  --radius:10px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --body:'Public Sans',system-ui,sans-serif;
+  --display:'Bricolage Grotesque','Public Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.001s!important;transition-duration:.001s!important}}
+body{
+  font-family:var(--body);color:var(--ink);background:var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:28px 28px;
+  min-height:100vh;line-height:1.55;
+}
+a{color:var(--turquoise-deep)}
+::selection{background:var(--saffron);color:var(--ink)}
+
+/* ---------- header ---------- */
+header{
+  max-width:980px;margin:0 auto;padding:34px 24px 8px;
+  display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+.wordmark{font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:-.5px}
+.wordmark .fa{font-weight:400;color:var(--turquoise);margin-left:10px;font-size:24px}
+.header-meta{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.08em;text-transform:uppercase}
+.header-meta a{color:var(--ink-faint);text-decoration:none;border-bottom:1px solid var(--line)}
+.header-meta a:hover{color:var(--turquoise-deep);border-color:var(--turquoise)}
+
+/* ---------- hero ---------- */
+.hero{max-width:980px;margin:0 auto;padding:26px 24px 22px}
+.hero h1{
+  font-family:var(--display);font-weight:600;font-size:clamp(26px,4.4vw,42px);
+  line-height:1.12;letter-spacing:-.8px;max-width:21ch;
+}
+.hero h1 .stroke{
+  position:relative;white-space:nowrap;
+}
+.hero h1 .stroke::after{
+  content:"";position:absolute;left:-2%;right:-2%;bottom:2px;height:9px;
+  background:var(--turquoise);opacity:.28;transform:skewX(-8deg);
+  z-index:-1;
+}
+.hero p{margin-top:12px;color:var(--ink-soft);max-width:58ch;font-size:15px}
+
+/* ---------- tabs ---------- */
+.tabs{max-width:980px;margin:6px auto 0;padding:0 24px;display:flex;gap:6px;flex-wrap:wrap}
+.tab{
+  font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+  border:1px solid var(--line);background:var(--card);color:var(--ink-soft);
+  padding:9px 16px;border-radius:8px 8px 0 0;border-bottom:none;cursor:pointer;
+}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{
+  background:var(--ink);color:#fff;border-color:var(--ink);
+}
+.tab:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--turquoise);outline-offset:2px;
+}
+
+/* ---------- sheet (main panel) ---------- */
+.sheet{
+  max-width:980px;margin:0 auto 60px;padding:0 24px;
+}
+.sheet-inner{
+  position:relative;background:var(--card);border:1px solid var(--line);
+  border-radius:0 var(--radius) var(--radius) var(--radius);
+  padding:34px clamp(20px,4vw,44px) 66px;
+  box-shadow:0 1px 2px rgba(23,36,47,.05),0 8px 28px rgba(23,36,47,.06);
+}
+/* corner registration marks */
+.sheet-inner::before,.sheet-inner::after{
+  content:"";position:absolute;width:14px;height:14px;pointer-events:none;
+}
+.sheet-inner::before{top:10px;left:10px;border-top:1.5px solid var(--ink-faint);border-left:1.5px solid var(--ink-faint)}
+.sheet-inner::after{top:10px;right:10px;border-top:1.5px solid var(--ink-faint);border-right:1.5px solid var(--ink-faint)}
+/* title block */
+.titleblock{
+  position:absolute;bottom:0;right:0;display:flex;
+  border-top:1px solid var(--line);border-left:1px solid var(--line);
+  font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--ink-faint);
+  text-transform:uppercase;
+}
+.titleblock span{padding:7px 14px;border-right:1px solid var(--line)}
+.titleblock span:last-child{border-right:none;color:var(--turquoise-deep)}
+
+.panel{display:none}
+.panel.active{display:block}
+.panel h2{font-family:var(--display);font-weight:600;font-size:22px;letter-spacing:-.3px}
+.panel .sub{color:var(--ink-soft);font-size:14px;margin:6px 0 22px;max-width:60ch}
+.annot{
+  font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--turquoise-deep);margin-bottom:6px;
+}
+
+/* ---------- form bits ---------- */
+label{display:block;font-size:13px;font-weight:600;margin:16px 0 6px;color:var(--ink)}
+input[type=text],input[type=email],textarea{
+  width:100%;border:1px solid var(--line);border-radius:8px;padding:11px 13px;
+  font-family:var(--body);font-size:14px;color:var(--ink);background:#FCFDFD;
+}
+textarea{min-height:130px;resize:vertical}
+input::placeholder,textarea::placeholder{color:var(--ink-faint)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:640px){.row{grid-template-columns:1fr}}
+
+.drop{
+  border:1.5px dashed var(--ink-faint);border-radius:var(--radius);
+  padding:30px 18px;text-align:center;cursor:pointer;background:#FBFCFC;
+  transition:border-color .15s,background .15s;
+}
+.drop:hover,.drop.over{border-color:var(--turquoise);background:#F0F8F8}
+.drop p{font-size:14px;color:var(--ink-soft);pointer-events:none}
+.drop .file-set{font-family:var(--mono);font-size:12px;color:var(--turquoise-deep);pointer-events:none}
+.drop input{display:none}
+
+.btn{
+  font-family:var(--mono);font-size:13px;letter-spacing:.08em;text-transform:uppercase;
+  background:var(--ink);color:#fff;border:none;border-radius:8px;
+  padding:13px 26px;cursor:pointer;margin-top:20px;
+  transition:background .15s;
+}
+.btn:hover{background:var(--turquoise-deep)}
+.btn:disabled{background:var(--ink-faint);cursor:wait}
+.btn.small{padding:8px 14px;font-size:11px;margin-top:10px}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--turquoise);color:var(--turquoise-deep)}
+
+/* ---------- results ---------- */
+.status{margin-top:18px;font-family:var(--mono);font-size:13px;color:var(--turquoise-deep);display:none;align-items:center;gap:10px}
+.status.on{display:flex}
+.status .pen{
+  width:14px;height:14px;border:2px solid var(--turquoise);border-right-color:transparent;
+  border-radius:50%;animation:spin 1s linear infinite;flex:none;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error{
+  margin-top:18px;padding:12px 16px;border:1px solid var(--danger);border-radius:8px;
+  color:var(--danger);font-size:14px;background:#FBF1EF;display:none;
+}
+.error.on{display:block}
+.result{margin-top:26px;display:none}
+.result.on{display:block}
+.result-card{
+  border:1px solid var(--line);border-radius:var(--radius);background:#FCFDFD;
+  padding:20px 22px;margin-top:14px;
+}
+.result-card h3{
+  font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--turquoise-deep);font-weight:500;margin-bottom:10px;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.result-card pre{
+  white-space:pre-wrap;word-wrap:break-word;font-family:var(--body);font-size:14px;
+  color:var(--ink);line-height:1.6;
+}
+.score{
+  display:inline-block;font-family:var(--mono);font-size:26px;font-weight:500;
+  color:var(--ink);border-bottom:4px solid var(--saffron);padding-bottom:2px;
+}
+
+/* job cards */
+.job{
+  border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin-top:12px;
+  background:#FCFDFD;
+}
+.job a{font-weight:600;font-size:15px;text-decoration:none;color:var(--ink)}
+.job a:hover{color:var(--turquoise-deep)}
+.job .src{font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.06em;margin:3px 0 6px;text-transform:uppercase}
+.job p{font-size:13.5px;color:var(--ink-soft)}
+
+/* build repeatables */
+.rep{border:1px solid var(--line);border-radius:var(--radius);padding:6px 18px 18px;margin-top:14px;position:relative;background:#FCFDFD}
+.rep .rm{
+  position:absolute;top:10px;right:10px;background:none;border:none;cursor:pointer;
+  font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.05em;
+}
+.rep .rm:hover{color:var(--danger)}
+
+footer{
+  max-width:980px;margin:0 auto;padding:0 24px 50px;
+  font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.06em;
+}
+footer a{color:var(--ink-faint)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">Tarsim<span class="fa" dir="rtl">ترسیم</span></div>
+  <div class="header-meta"><a href="/docs">API docs</a> · <a href="https://github.com/edititno/tarsim" rel="noopener">github.com/edititno/tarsim</a></div>
+</header>
+
+<section class="hero">
+  <h1>Every role deserves its own draft. <span class="stroke">Tarsim sketches it.</span></h1>
+  <p>Persian for “sketch” — Tarsim analyzes your resume, redraws it for a specific job description, writes the cover letter, and finds live openings. Upload a PDF and try it.</p>
+</section>
+
+<nav class="tabs" role="tablist" aria-label="Tools">
+  <button class="tab" role="tab" aria-selected="true" data-panel="analyze" id="tab-analyze">Analyze</button>
+  <button class="tab" role="tab" aria-selected="false" data-panel="tailor" id="tab-tailor">Tailor</button>
+  <button class="tab" role="tab" aria-selected="false" data-panel="search" id="tab-search">Find jobs</button>
+  <button class="tab" role="tab" aria-selected="false" data-panel="build" id="tab-build">Build from scratch</button>
+</nav>
+
+<main class="sheet">
+  <div class="sheet-inner">
+
+    <!-- ================= ANALYZE ================= -->
+    <section class="panel active" id="panel-analyze" role="tabpanel" aria-labelledby="tab-analyze">
+      <div class="annot">Sheet 01 — Analysis</div>
+      <h2>Get your resume scored</h2>
+      <p class="sub">Upload a PDF. You get strengths, weaknesses, ATS keyword fixes, verb upgrades, and a score out of 10.</p>
+
+      <div class="drop" id="drop-analyze" tabindex="0" role="button" aria-label="Upload resume PDF">
+        <p id="drop-analyze-label">Drop your resume PDF here, or click to choose a file</p>
+        <input type="file" accept=".pdf" id="file-analyze">
+      </div>
+      <button class="btn" id="go-analyze">Analyze resume</button>
+      <div class="status" id="status-analyze"><span class="pen"></span><span>Reading your resume and drafting notes — usually 10–20 seconds…</span></div>
+      <div class="error" id="error-analyze"></div>
+      <div class="result" id="result-analyze">
+        <div class="result-card">
+          <h3>Analysis <button class="btn small ghost" data-dl="analyze">Download as Word</button></h3>
+          <pre id="out-analyze"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAILOR ================= -->
+    <section class="panel" id="panel-tailor" role="tabpanel" aria-labelledby="tab-tailor">
+      <div class="annot">Sheet 02 — Tailoring</div>
+      <h2>Redraw your resume for one specific job</h2>
+      <p class="sub">Upload your resume PDF and paste the job description. You get a tailored resume, a cover letter, the list of changes made, and a match score.</p>
+
+      <div class="drop" id="drop-tailor" tabindex="0" role="button" aria-label="Upload resume PDF">
+        <p id="drop-tailor-label">Drop your resume PDF here, or click to choose a file</p>
+        <input type="file" accept=".pdf" id="file-tailor">
+      </div>
+      <label for="jd">Job description</label>
+      <textarea id="jd" placeholder="Paste the full job description here (at least 50 characters)…"></textarea>
+      <button class="btn" id="go-tailor">Tailor resume</button>
+      <div class="status" id="status-tailor"><span class="pen"></span><span>Redrawing your resume for this role — usually 20–40 seconds…</span></div>
+      <div class="error" id="error-tailor"></div>
+
+      <div class="result" id="result-tailor">
+        <div class="result-card" id="card-match" style="display:none">
+          <h3>Match score</h3>
+          <span class="score" id="out-match"></span>
+        </div>
+        <div class="result-card">
+          <h3>Tailored resume <button class="btn small ghost" data-dl="tailored-resume">Download as Word</button></h3>
+          <pre id="out-resume"></pre>
+        </div>
+        <div class="result-card">
+          <h3>Cover letter <button class="btn small ghost" data-dl="cover-letter">Download as Word</button></h3>
+          <pre id="out-cover"></pre>
+        </div>
+        <div class="result-card">
+          <h3>Key changes</h3>
+          <pre id="out-changes"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SEARCH ================= -->
+    <section class="panel" id="panel-search" role="tabpanel" aria-labelledby="tab-search">
+      <div class="annot">Sheet 03 — Job search</div>
+      <h2>Find live openings across the major boards</h2>
+      <p class="sub">One boolean search across LinkedIn, Indeed, Glassdoor, and ZipRecruiter. Operators like OR and quotes work.</p>
+
+      <div class="row">
+        <div>
+          <label for="q">Search query</label>
+          <input type="text" id="q" placeholder='e.g. "AI engineer" OR "LLM engineer"'>
+        </div>
+        <div>
+          <label for="loc">Location <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label>
+          <input type="text" id="loc" placeholder="e.g. Washington DC">
+        </div>
+      </div>
+      <button class="btn" id="go-search">Search jobs</button>
+      <div class="status" id="status-search"><span class="pen"></span><span>Searching across job boards…</span></div>
+      <div class="error" id="error-search"></div>
+      <div class="result" id="result-search">
+        <div class="annot" id="search-count" style="margin-top:22px"></div>
+        <div id="out-jobs"></div>
+      </div>
+    </section>
+
+    <!-- ================= BUILD ================= -->
+    <section class="panel" id="panel-build" role="tabpanel" aria-labelledby="tab-build">
+      <div class="annot">Sheet 04 — Builder</div>
+      <h2>Build a resume from scratch</h2>
+      <p class="sub">Answer in plain words — no resume-speak needed. You get a complete, ATS-friendly resume targeting your chosen role.</p>
+
+      <div class="row">
+        <div><label for="b-name">Full name</label><input type="text" id="b-name" autocomplete="off"></div>
+        <div><label for="b-email">Email</label><input type="text" id="b-email" autocomplete="off"></div>
+      </div>
+      <div class="row">
+        <div><label for="b-phone">Phone <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input type="text" id="b-phone" autocomplete="off"></div>
+        <div><label for="b-loc">Location <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label><input type="text" id="b-loc"></div>
+      </div>
+      <label for="b-role">Target role</label>
+      <input type="text" id="b-role" placeholder="e.g. Junior AI Engineer">
+      <label for="b-about">About you, in your own words</label>
+      <textarea id="b-about" placeholder="A few sentences about who you are and what you're good at…"></textarea>
+
+      <label style="margin-top:24px">Work experience</label>
+      <div id="work-list"></div>
+      <button class="btn small ghost" id="add-work" type="button">+ Add another role</button>
+
+      <label style="margin-top:24px">Education</label>
+      <div id="edu-list"></div>
+      <button class="btn small ghost" id="add-edu" type="button">+ Add another</button>
+
+      <label for="b-skills">Skills</label>
+      <input type="text" id="b-skills" placeholder="Comma-separated: Python, SQL, FastAPI…">
+      <label for="b-achieve">Achievements <span style="font-weight:400;color:var(--ink-faint)">(optional)</span></label>
+      <textarea id="b-achieve" style="min-height:80px"></textarea>
+
+      <button class="btn" id="go-build">Build my resume</button>
+      <div class="status" id="status-build"><span class="pen"></span><span>Drafting your resume — usually 20–40 seconds…</span></div>
+      <div class="error" id="error-build"></div>
+      <div class="result" id="result-build">
+        <div class="result-card">
+          <h3>Your resume <button class="btn small ghost" data-dl="resume">Download as Word</button></h3>
+          <pre id="out-build"></pre>
+        </div>
+      </div>
+    </section>
+
+    <div class="titleblock" aria-hidden="true">
+      <span>Tarsim</span><span>Rev 0.7</span><span id="tb-sheet">Sheet 01 / Analyze</span>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Built by Soha Roozbehi · FastAPI + GPT-4o-mini · <a href="https://github.com/edititno/tarsim" rel="noopener">Source on GitHub</a> · <a href="/docs">Try the raw API</a> · Files are processed in memory and not stored.
+</footer>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* ---------- tabs ---------- */
+const sheetNames = {analyze:"Sheet 01 / Analyze", tailor:"Sheet 02 / Tailor", search:"Sheet 03 / Find jobs", build:"Sheet 04 / Build"};
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === t));
+  document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+  $("panel-" + t.dataset.panel).classList.add("active");
+  $("tb-sheet").textContent = sheetNames[t.dataset.panel];
+}));
+
+/* ---------- file drops ---------- */
+function wireDrop(dropId, inputId, labelId){
+  const drop = $(dropId), input = $(inputId), label = $(labelId);
+  const setName = f => {
+    if(!f) return;
+    if(!f.name.toLowerCase().endsWith(".pdf")){ label.textContent = "That file isn't a PDF — please choose a .pdf file."; input.value = ""; return; }
+    label.innerHTML = '<span class="file-set">✓ ' + f.name.replace(/[<>&]/g,"") + "</span>";
+  };
+  drop.addEventListener("click", () => input.click());
+  drop.addEventListener("keydown", e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); input.click(); }});
+  input.addEventListener("change", () => setName(input.files[0]));
+  ["dragover","dragenter"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", e => {
+    if(e.dataTransfer.files.length){ input.files = e.dataTransfer.files; setName(input.files[0]); }
+  });
+}
+wireDrop("drop-analyze","file-analyze","drop-analyze-label");
+wireDrop("drop-tailor","file-tailor","drop-tailor-label");
+
+/* ---------- shared helpers ---------- */
+function busy(key, on, btn){
+  $("status-"+key).classList.toggle("on", on);
+  $("error-"+key).classList.remove("on");
+  if(!on) return;
+  $("result-"+key).classList.remove("on");
+  btn.disabled = on;
+}
+function fail(key, btn, msg){
+  $("status-"+key).classList.remove("on");
+  const e = $("error-"+key);
+  e.textContent = msg;
+  e.classList.add("on");
+  btn.disabled = false;
+}
+function done(key, btn){
+  $("status-"+key).classList.remove("on");
+  $("result-"+key).classList.add("on");
+  btn.disabled = false;
+}
+async function readError(res){
+  try{ const j = await res.json(); return j.detail || ("Request failed ("+res.status+")"); }
+  catch{ return "Request failed ("+res.status+")"; }
+}
+
+/* ---------- analyze ---------- */
+$("go-analyze").addEventListener("click", async () => {
+  const btn = $("go-analyze"), f = $("file-analyze").files[0];
+  if(!f) return fail("analyze", btn, "Choose a PDF resume first.");
+  busy("analyze", true, btn);
+  try{
+    const fd = new FormData(); fd.append("file", f);
+    const res = await fetch("/analyze-resume", {method:"POST", body:fd});
+    if(!res.ok) return fail("analyze", btn, await readError(res));
+    const data = await res.json();
+    $("out-analyze").textContent = data.analysis;
+    done("analyze", btn);
+  }catch(err){ fail("analyze", btn, "Couldn't reach the server. Check your connection and try again."); }
+});
+
+/* ---------- tailor ---------- */
+function section(output, tag, nextTags){
+  const start = output.indexOf(tag);
+  if(start === -1) return "";
+  let end = output.length;
+  for(const t of nextTags){
+    const i = output.indexOf(t, start + tag.length);
+    if(i !== -1 && i < end) end = i;
+  }
+  return output.slice(start + tag.length, end).trim();
+}
+$("go-tailor").addEventListener("click", async () => {
+  const btn = $("go-tailor"), f = $("file-tailor").files[0], jd = $("jd").value.trim();
+  if(!f) return fail("tailor", btn, "Choose a PDF resume first.");
+  if(jd.length < 50) return fail("tailor", btn, "Paste the full job description (at least 50 characters).");
+  busy("tailor", true, btn);
+  try{
+    const fd = new FormData(); fd.append("file", f); fd.append("job_description", jd);
+    const res = await fetch("/tailor-resume", {method:"POST", body:fd});
+    if(!res.ok) return fail("tailor", btn, await readError(res));
+    const data = await res.json();
+    const o = data.output || "";
+    const tags = ["===TAILORED_RESUME===","===COVER_LETTER===","===KEY_CHANGES===","===MATCH_SCORE==="];
+    const resume = section(o, tags[0], tags), cover = section(o, tags[1], tags),
+          changes = section(o, tags[2], tags), match = section(o, tags[3], tags);
+    if(resume || cover){
+      $("out-resume").textContent = resume || "(not returned)";
+      $("out-cover").textContent = cover || "(not returned)";
+      $("out-changes").textContent = changes || "(not returned)";
+      const m = match.match(/(\d+(?:\.\d+)?)\s*\/?\s*10?/);
+      $("card-match").style.display = m ? "block" : "none";
+      if(m) $("out-match").textContent = m[1] + " / 10";
+    }else{
+      $("out-resume").textContent = o; // fallback: show raw output
+      $("out-cover").textContent = ""; $("out-changes").textContent = "";
+      $("card-match").style.display = "none";
+    }
+    done("tailor", btn);
+  }catch(err){ fail("tailor", btn, "Couldn't reach the server. Check your connection and try again."); }
+});
+
+/* ---------- search ---------- */
+$("go-search").addEventListener("click", async () => {
+  const btn = $("go-search"), q = $("q").value.trim(), loc = $("loc").value.trim();
+  if(q.length < 3) return fail("search", btn, "Enter a search query (at least 3 characters).");
+  busy("search", true, btn);
+  try{
+    const url = "/search-jobs?query=" + encodeURIComponent(q) + (loc ? "&location=" + encodeURIComponent(loc) : "");
+    const res = await fetch(url);
+    if(!res.ok) return fail("search", btn, await readError(res));
+    const data = await res.json();
+    const jobs = data.jobs || [];
+    $("search-count").textContent = jobs.length + " result" + (jobs.length === 1 ? "" : "s");
+    const wrap = $("out-jobs"); wrap.textContent = "";
+    if(!jobs.length){
+      const p = document.createElement("p"); p.className = "sub";
+      p.textContent = "No results for that query. Try broader terms or drop the location.";
+      wrap.appendChild(p);
+    }
+    jobs.forEach(j => {
+      const card = document.createElement("div"); card.className = "job";
+      const a = document.createElement("a"); a.href = j.link; a.target = "_blank"; a.rel = "noopener"; a.textContent = j.title || j.link;
+      const src = document.createElement("div"); src.className = "src"; src.textContent = j.source || "";
+      const p = document.createElement("p"); p.textContent = j.snippet || "";
+      card.append(a, src, p); wrap.appendChild(card);
+    });
+    done("search", btn);
+  }catch(err){ fail("search", btn, "Couldn't reach the server. Check your connection and try again."); }
+});
+
+/* ---------- build: repeatable blocks ---------- */
+function repBlock(listId, fields){
+  const wrap = document.createElement("div"); wrap.className = "rep";
+  const rm = document.createElement("button"); rm.className = "rm"; rm.type = "button"; rm.textContent = "remove";
+  rm.addEventListener("click", () => { if($(listId).children.length > 1) wrap.remove(); });
+  wrap.appendChild(rm);
+  fields.forEach(f => {
+    const l = document.createElement("label"); l.textContent = f.label;
+    let el;
+    if(f.area){ el = document.createElement("textarea"); el.style.minHeight = "70px"; }
+    else { el = document.createElement("input"); el.type = "text"; }
+    el.dataset.k = f.k; el.placeholder = f.ph || "";
+    wrap.append(l, el);
+  });
+  $(listId).appendChild(wrap);
+}
+const workFields = [
+  {k:"company", label:"Company", ph:"e.g. Acme Corp"},
+  {k:"title", label:"Job title", ph:"e.g. Product Manager"},
+  {k:"duration", label:"Duration", ph:"e.g. 2021 – 2024"},
+  {k:"responsibilities", label:"What you did, in plain words", area:true},
+];
+const eduFields = [
+  {k:"school", label:"School", ph:"e.g. University of Maryland"},
+  {k:"degree", label:"Degree", ph:"e.g. MS Data Science"},
+  {k:"year", label:"Year", ph:"e.g. 2026"},
+];
+repBlock("work-list", workFields);
+repBlock("edu-list", eduFields);
+$("add-work").addEventListener("click", () => repBlock("work-list", workFields));
+$("add-edu").addEventListener("click", () => repBlock("edu-list", eduFields));
+
+function collect(listId){
+  return [...$(listId).children].map(rep => {
+    const o = {};
+    rep.querySelectorAll("[data-k]").forEach(el => o[el.dataset.k] = el.value.trim());
+    return o;
+  }).filter(o => Object.values(o).some(v => v));
+}
+
+$("go-build").addEventListener("click", async () => {
+  const btn = $("go-build");
+  const body = {
+    full_name: $("b-name").value.trim(),
+    email: $("b-email").value.trim(),
+    phone: $("b-phone").value.trim(),
+    location: $("b-loc").value.trim(),
+    target_role: $("b-role").value.trim(),
+    summary_input: $("b-about").value.trim(),
+    work_experiences: collect("work-list"),
+    education: collect("edu-list"),
+    skills: $("b-skills").value.trim(),
+    achievements: $("b-achieve").value.trim(),
+  };
+  if(!body.full_name || !body.email) return fail("build", btn, "Name and email are required.");
+  if(!body.target_role) return fail("build", btn, "Tell us the role you're targeting.");
+  if(!body.summary_input) return fail("build", btn, "Add a few sentences about yourself.");
+  if(!body.work_experiences.length) return fail("build", btn, "Add at least one work experience.");
+  if(!body.education.length) return fail("build", btn, "Add at least one education entry.");
+  if(!body.skills) return fail("build", btn, "List a few skills.");
+  busy("build", true, btn);
+  try{
+    const res = await fetch("/build-resume", {
+      method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)
+    });
+    if(!res.ok) return fail("build", btn, await readError(res));
+    const data = await res.json();
+    $("out-build").textContent = data.resume;
+    done("build", btn);
+  }catch(err){ fail("build", btn, "Couldn't reach the server. Check your connection and try again."); }
+});
+
+/* ---------- docx export ---------- */
+const dlSources = {
+  "analyze": () => $("out-analyze").textContent,
+  "tailored-resume": () => $("out-resume").textContent,
+  "cover-letter": () => $("out-cover").textContent,
+  "resume": () => $("out-build").textContent,
+};
+document.querySelectorAll("[data-dl]").forEach(btn => btn.addEventListener("click", async () => {
+  const key = btn.dataset.dl, text = dlSources[key]();
+  if(!text || text.length < 10) return;
+  const old = btn.textContent; btn.textContent = "Preparing…"; btn.disabled = true;
+  try{
+    const fd = new FormData(); fd.append("text", text); fd.append("filename", "tarsim-" + key);
+    const res = await fetch("/export-docx", {method:"POST", body:fd});
+    if(!res.ok) throw new Error();
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "tarsim-" + key + ".docx";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }catch{ btn.textContent = "Download failed — try again"; setTimeout(() => btn.textContent = old, 2500); btn.disabled = false; return; }
+  btn.textContent = old; btn.disabled = false;
+}));
+</script>
+</body>
+</html>
