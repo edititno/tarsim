@@ -6,9 +6,7 @@ An AI-powered tool that builds resumes from scratch, analyzes existing ones, tai
 
 ## Live Demo
 
-**Backend API:** [https://web-production-c2db3.up.railway.app](https://web-production-c2db3.up.railway.app)
-
-**Interactive API docs:** [https://web-production-c2db3.up.railway.app/docs](https://web-production-c2db3.up.railway.app/docs)
+**Live app:** https://tarsim.up.railway.app
 
 ## What It Does
 
@@ -61,7 +59,7 @@ Job search APIs like LinkedIn, Indeed, and Glassdoor are closed or restricted. M
     pip install -r requirements.txt
     uvicorn api.tarsim_api:app --reload
 
-Server runs at `http://localhost:8000`. Docs at `/docs`.
+Server runs at `http://localhost:8000`.
 
 ## File Structure
 
@@ -76,8 +74,6 @@ Server runs at `http://localhost:8000`. Docs at `/docs`.
 
 ## Roadmap
 
-- React frontend with clean UI (replaces Swagger)
-- Vercel deployment for frontend
 - PDF export (Word export currently working)
 - Application tracking dashboard
 - Save and reuse multiple resume versions
